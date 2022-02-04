@@ -98,6 +98,16 @@ erpnext.PointOfSale.ItemDetails = class {
 		const batched = item_row.has_batch_no;
 		const no_serial_selected = !item_row.serial_no;
 		const no_batch_selected = !item_row.batch_no;
+		var a=item_row.batch_no
+		// console.log(item_row.batch_no)
+		frappe.call({
+			method: "erpnext.selling.page.point_of_sale.point_of_sale.batch_validation1",
+			args:{pos_batch:a}
+			// callback: function(r) {
+				
+			// }
+		})
+
 
 		if ((serialized && no_serial_selected) || (batched && no_batch_selected) ||
 			(serialized && batched && (no_batch_selected || no_serial_selected))) {
@@ -285,6 +295,7 @@ erpnext.PointOfSale.ItemDetails = class {
 				}
 			};
 			this.batch_no_control.refresh();
+
 		}
 
 		if (this.uom_control) {
@@ -417,4 +428,5 @@ erpnext.PointOfSale.ItemDetails = class {
 	toggle_component(show) {
 		show ? this.$component.css('display', 'flex') : this.$component.css('display', 'none');
 	}
+		
 }

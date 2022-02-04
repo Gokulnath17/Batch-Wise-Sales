@@ -186,13 +186,37 @@ erpnext.PointOfSale.ItemCart = class {
 			this.numpad_value = '';
 		});
 
-		this.$component.on('click', '.checkout-btn', function() {
+		this.$component.on('click', '.checkout-btn', function(item_row) {
+			// console.log(item_row.batch_no)
 			if ($(this).attr('style').indexOf('--blue-500') == -1) return;
-
-			me.events.checkout();
-			me.toggle_checkout_btn(false);
-
-			me.allow_discount_change && me.$add_discount_elem.removeClass("d-none");
+			frappe.call({
+				method: "erpnext.selling.page.point_of_sale.point_of_sale.batch_validation2",
+				// args:{a:item_row.batch_no},
+				callback: function(r,v) {
+					if(r["message"] == 1)
+					{
+						me.events.checkout();
+						me.toggle_checkout_btn(false);
+						me.allow_discount_change && me.$add_discount_elem.removeClass("d-none");
+					}
+					else if(r["message"] == 0)
+						{
+						// ${item_data.item_row.batch_no}
+						frappe.msgprint("Old batch items are in stocks, So please sell those items first")
+						me.events.checkout();
+						me.toggle_checkout_btn(false);
+						me.allow_discount_change && me.$add_discount_elem.removeClass("d-none");
+						}
+					else if(r["message"] != 0){
+						frappe.msgprint("Please sell the old batch item for this product "+r["message"])
+						//alert("First Sold the old batch Items alert"+r["message"])
+					}
+				}	
+			})
+			//me.events.checkout();
+			//me.toggle_checkout_btn(false);
+			//me.allow_discount_change && me.$add_discount_elem.removeClass("d-none");
+			//apps/erpnext/erpnext/selling/page/point_of_sale/point_of_sale.py
 		});
 
 		this.$totals_section.on('click', '.edit-cart-btn', () => {

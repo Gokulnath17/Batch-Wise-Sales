@@ -34,6 +34,7 @@
   "set_qty_in_transactions_based_on_serial_no_input",
   "column_break_10",
   "disable_serial_no_and_batch_selector",
+  "batch_wise_sales",
   "auto_material_request",
   "auto_indent",
   "column_break_27",
@@ -298,6 +299,12 @@
    "fieldname": "update_existing_price_list_rate",
    "fieldtype": "Check",
    "label": "Update Existing Price List Rate"
+  },
+  {
+   "default": "0",
+   "fieldname": "batch_wise_sales",
+   "fieldtype": "Check",
+   "label": "Allow Only Older Batch to Sale First (In POS)"
   }
  ],
  "icon": "icon-cog",
@@ -305,7 +312,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2021-11-06 19:40:02.183592",
+ "modified": "2022-02-04 13:33:44.171339",
  "modified_by": "Administrator",
  "module": "Stock",
  "name": "Stock Settings",

@@ -2,13 +2,17 @@
 # License: GNU General Public License v3. See license.txt
 
 
+from asyncio.unix_events import BaseChildWatcher
 import json
+from re import A
+from warnings import filters
 
 import frappe
 from frappe.utils.nestedset import get_root_of
 
 from erpnext.accounts.doctype.pos_invoice.pos_invoice import get_stock_availability
 from erpnext.accounts.doctype.pos_profile.pos_profile import get_item_groups
+from pymysql import NULL
 
 
 def search_by_term(search_term, warehouse, price_list):
@@ -284,3 +288,80 @@ def set_customer_info(fieldname, customer, value=""):
 		contact_doc.set('phone_nos', [{ 'phone': value, 'is_primary_mobile_no': 1}])
 		frappe.db.set_value('Customer', customer, 'mobile_no', value)
 	contact_doc.save()
+
+
+##batch validation1
+@frappe.whitelist(allow_guest=True)
+def batch_validation1(pos_batch=None):
+	global pos_batch1
+	pos_batch1=pos_batch
+##batch validation2
+batch_validation1()
+@frappe.whitelist(allow_guest=True)
+def batch_validation2():
+	# print(pos_batch1)
+	if(pos_batch1 != None):
+		cb=frappe.get_doc("Stock Settings").__dict__["batch_wise_sales"]
+		# if(cb==1):
+		listn=[]
+		listc=[]
+		listi=[]
+		all_batch=frappe.db.get_all("Batch",fields=["name","creation","item","batch_qty","disabled"])
+		# print(all_batch)
+		for i in range(0,len(all_batch),1):
+			listi.append(all_batch[i]["item"])
+			qty=all_batch[i]["batch_qty"]
+			if(qty == 0):
+				all_batch[i]["disabled"]=1
+			# pos_i=""
+			# print(listi)
+			# print(pos_i)
+			# and all_batch[i]["disabled"]=="0"
+			# print(pos_batch1,
+			# )
+			if(pos_batch1 == all_batch[i]["name"] and all_batch[i]["disabled"]==0 ):
+				# print(pos_batch1)
+				pos_i=all_batch[i]["item"]
+				pos_c=all_batch[i]["creation"]
+				# print(pos_i)
+			else:
+				# print(listi,"hello")
+				# print(pos_i,"hii")
+				for x in range(0,len(listi),1):
+					# print(listi[x],"xxx")
+					try:
+						if(pos_i == listi[x]):
+							# print(listi[x],"lllll")
+							n=all_batch[x]["name"]
+							c=all_batch[x]["creation"]
+							listn.append(n)
+							listc.append(c)
+					except:
+						continue
+		# print(pos_i,"name")
+		# print(listi,"ff")
+		# print(listn,"mm")
+		x=None
+		for j in range(0,len(listc),1):	
+			if(pos_c > listc[j]):
+				pos_c=listc[j]
+				# print(pos_c,"cccc")
+				x=j
+		if(cb==1):
+			try:
+				fr=pos_i + " -> Old batch name : " + listn[x]
+				return(fr)
+			except:
+				return 1
+		else:
+			if(x==None):
+				return 1
+			else:
+				return 0
+				# pass
+		# else:
+		# 	# return 0
+		# 	pass
+	else:
+		return 1	
+

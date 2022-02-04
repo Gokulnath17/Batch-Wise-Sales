@@ -8,11 +8,11 @@ from frappe import _
 from erpnext.accounts.utils import get_balance_on
 
 
-def execute(filters=None):
+def execute(filters=None):  
 	filters = frappe._dict(filters or {})
 	columns = get_columns(filters)
 	data = get_data(filters)
-	return columns, data
+	return columns,data
 
 def get_columns(filters):
 	columns = [
