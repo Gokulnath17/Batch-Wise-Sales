@@ -99,7 +99,7 @@ erpnext.PointOfSale.ItemDetails = class {
 		const no_serial_selected = !item_row.serial_no;
 		const no_batch_selected = !item_row.batch_no;
 		var a=item_row.batch_no
-		// console.log(item_row.batch_no)
+		console.log(item_row.batch_no)
 		frappe.call({
 			method: "erpnext.selling.page.point_of_sale.point_of_sale.batch_validation1",
 			args:{pos_batch:a}

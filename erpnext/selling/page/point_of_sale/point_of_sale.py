@@ -291,77 +291,87 @@ def set_customer_info(fieldname, customer, value=""):
 
 
 ##batch validation1
+arr=[]
+ps=1
 @frappe.whitelist(allow_guest=True)
 def batch_validation1(pos_batch=None):
+	arr.append(pos_batch)
 	global pos_batch1
-	pos_batch1=pos_batch
+	pos_batch1=arr
+	# print(pos_batch1)
+	
 ##batch validation2
 batch_validation1()
+pos_tot_batch=0
 @frappe.whitelist(allow_guest=True)
 def batch_validation2():
-	# print(pos_batch1)
-	if(pos_batch1 != None):
-		cb=frappe.get_doc("Stock Settings").__dict__["batch_wise_sales"]
-		# if(cb==1):
-		listn=[]
-		listc=[]
-		listi=[]
-		all_batch=frappe.db.get_all("Batch",fields=["name","creation","item","batch_qty","disabled"])
-		# print(all_batch)
-		for i in range(0,len(all_batch),1):
-			listi.append(all_batch[i]["item"])
-			qty=all_batch[i]["batch_qty"]
-			if(qty == 0):
-				all_batch[i]["disabled"]=1
-			# pos_i=""
-			# print(listi)
-			# print(pos_i)
-			# and all_batch[i]["disabled"]=="0"
-			# print(pos_batch1,
-			# )
-			if(pos_batch1 == all_batch[i]["name"] and all_batch[i]["disabled"]==0 ):
-				# print(pos_batch1)
-				pos_i=all_batch[i]["item"]
-				pos_c=all_batch[i]["creation"]
-				# print(pos_i)
-			else:
-				# print(listi,"hello")
-				# print(pos_i,"hii")
-				for x in range(0,len(listi),1):
-					# print(listi[x],"xxx")
-					try:
-						if(pos_i == listi[x]):
-							# print(listi[x],"lllll")
-							n=all_batch[x]["name"]
-							c=all_batch[x]["creation"]
-							listn.append(n)
-							listc.append(c)
-					except:
-						continue
-		# print(pos_i,"name")
-		# print(listi,"ff")
-		# print(listn,"mm")
-		x=None
-		for j in range(0,len(listc),1):	
-			if(pos_c > listc[j]):
-				pos_c=listc[j]
-				# print(pos_c,"cccc")
-				x=j
-		if(cb==1):
-			try:
-				fr=pos_i + " -> Old batch name : " + listn[x]
-				return(fr)
-			except:
-				return 1
-		else:
-			if(x==None):
-				return 1
-			else:
-				return 0
-				# pass
-		# else:
-		# 	# return 0
-		# 	pass
+	global pos_tot_batch,pos_batch1
+	# print(pos_tot_batch,"global")
+	# print(pos_batch1,"normal")
+	if(len(pos_batch1) == pos_tot_batch or pos_tot_batch==0):
+		# print("true")
+		pass
 	else:
-		return 1	
-
+		all_batch=frappe.db.get_all("Batch",fields=["name","item","disabled"])
+		print(all_batch)
+		lbn=[]
+		lin=[]
+		for i in range(0,len(all_batch),1):
+			if(pos_batch1[len(pos_batch1)-1] == all_batch[i]["name"] and all_batch[i]["disabled"]==0):
+				lin.append(all_batch[i]["item"])
+				print(lin,"itemname")
+				for j in range(0,len(all_batch),1):
+					if(lin[0]==all_batch[j]["item"]):
+						lbn.append(all_batch[j]["name"])
+				print(lbn,"batchname")
+		print(pos_batch1)
+		for x in range(0,len(pos_batch1),1):
+			if(lbn[0]==pos_batch1[x]):
+				print(pos_batch1.pop(x),"hiii")
+				break
+		# print("false")
+	pos_tot_batch=len(pos_batch1)
+	# print(pos_tot_batch,"jjjjjj")
+	for pn in range(ps,len(pos_batch1),1):
+		if(pos_batch1[pn] != None):
+			cb=frappe.get_doc("Stock Settings").__dict__["batch_wise_sales"]
+			listn=[]
+			listc=[]
+			listi=[]
+			all_batch=frappe.db.get_all("Batch",fields=["name","creation","item","batch_qty","disabled"])
+			for i in range(0,len(all_batch),1):
+				listi.append(all_batch[i]["item"])
+				qty=all_batch[i]["batch_qty"]
+				if(qty == 0):
+					all_batch[i]["disabled"]=1
+				if(pos_batch1[pn] == all_batch[i]["name"] and all_batch[i]["disabled"]==0 ):
+					pos_i=all_batch[i]["item"]
+					pos_c=all_batch[i]["creation"]
+				else:
+					for x in range(0,len(listi),1):
+						try:
+							if(pos_i == listi[x]):
+								n=all_batch[x]["name"]
+								c=all_batch[x]["creation"]
+								listn.append(n)
+								listc.append(c)
+						except:
+							continue
+			x=None
+			for j in range(0,len(listc),1):	
+				if(pos_c > listc[j]):
+					pos_c=listc[j]
+					x=j
+			if(cb==1):
+				try:
+					fr=pos_i + " -> Old batch name : " + listn[x]
+					return(fr)
+				except:
+					return 1
+			else:
+				if(x==None):
+					return 1
+				else:
+					return 0
+		else:
+			return 1
