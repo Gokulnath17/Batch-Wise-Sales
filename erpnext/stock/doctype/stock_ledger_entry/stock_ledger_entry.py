@@ -38,7 +38,7 @@ class StockLedgerEntry(Document):
 		validate_warehouse_company(self.warehouse, self.company)
 		self.scrub_posting_time()
 		self.validate_and_set_fiscal_year()
-		self.block_transactions_against_group_warehouse()
+		# self.block_transactions_against_group_warehouse()
 		self.validate_with_last_transaction_posting_time()
 
 

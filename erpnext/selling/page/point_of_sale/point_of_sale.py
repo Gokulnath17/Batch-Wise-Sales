@@ -4,6 +4,7 @@
 
 from asyncio.unix_events import BaseChildWatcher
 import json
+from operator import pos
 from re import A
 from warnings import filters
 
@@ -292,7 +293,7 @@ def set_customer_info(fieldname, customer, value=""):
 
 ##batch validation1
 arr=[]
-ps=1
+pos_batch1=None
 @frappe.whitelist(allow_guest=True)
 def batch_validation1(pos_batch=None):
 	arr.append(pos_batch)
@@ -307,7 +308,7 @@ pos_tot_batch=0
 def batch_validation2():
 	global pos_tot_batch,pos_batch1
 	# print(pos_tot_batch,"global")
-	# print(pos_batch1,"normal")
+	print(pos_batch1,"normal")
 	if(len(pos_batch1) == pos_tot_batch or pos_tot_batch==0):
 		# print("true")
 		pass
@@ -329,10 +330,12 @@ def batch_validation2():
 			if(lbn[0]==pos_batch1[x]):
 				print(pos_batch1.pop(x),"hiii")
 				break
+		
 		# print("false")
 	pos_tot_batch=len(pos_batch1)
 	# print(pos_tot_batch,"jjjjjj")
-	for pn in range(ps,len(pos_batch1),1):
+	pos_c=None
+	for pn in range(1,len(pos_batch1),1):
 		if(pos_batch1[pn] != None):
 			cb=frappe.get_doc("Stock Settings").__dict__["batch_wise_sales"]
 			listn=[]
@@ -346,7 +349,9 @@ def batch_validation2():
 					all_batch[i]["disabled"]=1
 				if(pos_batch1[pn] == all_batch[i]["name"] and all_batch[i]["disabled"]==0 ):
 					pos_i=all_batch[i]["item"]
+					print(pos_c,"pos_cmmmmmmmmmmmmmmmm")
 					pos_c=all_batch[i]["creation"]
+					print(pos_c,"pos_cmmmmmmmmmmmmmmmmyyyyyyyyyyyyyyyyy")
 				else:
 					for x in range(0,len(listi),1):
 						try:
@@ -357,17 +362,34 @@ def batch_validation2():
 								listc.append(c)
 						except:
 							continue
+			i=0
+
+			print(listc,"cccccccccccccccccccccccccccccccc")
 			x=None
-			for j in range(0,len(listc),1):	
+			print(len(listc),"vvvvvvvvvvvvvvvvvvvvv")
+			print(pos_c,"pos_ccccccccccccc")
+			for j in range(0,len(listc),1):
+				print(j,"jjjjjjjjjjjjjjjj")
+				print(pos_c,"pos_csssssssssssss")
 				if(pos_c > listc[j]):
+					print(pos_c,"pos_c")
 					pos_c=listc[j]
 					x=j
 			if(cb==1):
 				try:
+					print(listn[x],"kkkkkkkkkkkkkkkkkk")
 					fr=pos_i + " -> Old batch name : " + listn[x]
+					print(fr,"fffffffffffffffffffffffffffffffffffffffffff")
+					print(pos_batch1,"normalssssssssssssssssssssss")
+					pos_batch1=None
+					print(pos_batch1,"normalssssssssssssssssssssss")
 					return(fr)
 				except:
+					print(pos_batch1,"normalssssssssssssssssssssss")
+					print("ssssssssssssssssssssssssssssssssssss")
+					pos_batch1=None
 					return 1
+			
 			else:
 				if(x==None):
 					return 1
@@ -375,3 +397,4 @@ def batch_validation2():
 					return 0
 		else:
 			return 1
+	print(pos_batch1,"normalssssssssssssssssssssss")
