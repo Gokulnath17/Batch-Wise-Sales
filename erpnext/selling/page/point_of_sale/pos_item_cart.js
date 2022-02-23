@@ -97,9 +97,15 @@ erpnext.PointOfSale.ItemCart = class {
 		this.$totals_section = this.$component.find('.cart-totals-section');
 
 		this.$totals_section.append(
-			`<div class="add-discount-wrapper">
-				${this.get_discount_icon()} ${__('Add Discount')}
+			`
+			<div class="add-discount-percentage-wrapper">
+				${this.get_discount_icon()} ${__('Add Discount Percentage')}<br>
+				${__("--------------------------------------------------------")}
 			</div>
+			<div class="add-discount-amount-wrapper">
+				${this.get_discount_icon()} ${__('Add Amount Percentage')}
+			</div>
+			
 			<div class="net-total-container">
 				<div class="net-total-label">${__("Net Total")}</div>
 				<div class="net-total-value">0.00</div>
@@ -112,8 +118,8 @@ erpnext.PointOfSale.ItemCart = class {
 			<div class="checkout-btn">${__('Checkout')}</div>
 			<div class="edit-cart-btn">${__('Edit Cart')}</div>`
 		)
-
-		this.$add_discount_elem = this.$component.find(".add-discount-wrapper");
+		this.$add_discount_percentage_elem = this.$component.find(".add-discount-percentage-wrapper");
+		this.$add_discount_amount_elem = this.$component.find(".add-discount-amount-wrapper");
 	}
 
 	make_cart_numpad() {
@@ -186,37 +192,138 @@ erpnext.PointOfSale.ItemCart = class {
 			this.numpad_value = '';
 		});
 
-		this.$component.on('click', '.checkout-btn', function(item_row) {
+		this.$component.on('click', '.checkout-btn', function() {
 			// console.log(item_row.batch_no)
 			if ($(this).attr('style').indexOf('--blue-500') == -1) return;
-			frappe.call({
-				method: "erpnext.selling.page.point_of_sale.point_of_sale.batch_validation2",
-				// args:{a:item_row.batch_no},
-				callback: function(r,v) {
-					if(r["message"] == 1)
+			let s = new frappe.ui.Dialog({
+				title: 'Select The Sales Type',
+				fields: [
 					{
-						me.events.checkout();
-						me.toggle_checkout_btn(false);
-						me.allow_discount_change && me.$add_discount_elem.removeClass("d-none");
+						label: 'Direct Selling',
+						fieldname: 'Direct_Selling',
+						fieldtype: 'Check'
+					},
+					{
+						label: 'Transport Selling',
+						fieldname: 'Transport_Selling',
+						fieldtype: 'Check'
+					},
+					{
+						label: 'Courrier Selling',
+						fieldname: 'Courrier_Selling',
+						fieldtype: 'Check'
 					}
-					else if(r["message"] == 0)
-						{
-						// ${item_data.item_row.batch_no}
-						frappe.msgprint("Old batch items are in stocks, So please sell those items first")
-						me.events.checkout();
-						me.toggle_checkout_btn(false);
-						me.allow_discount_change && me.$add_discount_elem.removeClass("d-none");
-						}
-					else if(r["message"] != 0){
-						frappe.msgprint("Please sell the old batch item for this product "+r["message"])
-						//alert("First Sold the old batch Items alert"+r["message"])
+				],
+				primary_action_label: 'Submit',
+				primary_action(values) {
+					var total_count_sales=values["Direct_Selling"]+values["Transport_Selling"]+values["Courrier_Selling"]
+					if(total_count_sales==1){
+						frappe.call({
+							method: "erpnext.selling.page.point_of_sale.point_of_sale.sales",
+							args:{Direct_Selling:values["Direct_Selling"],Transport_Selling:values["Transport_Selling"],Courrier_Selling:values["Courrier_Selling"]},
+							callback: function(r){
+								console.log(r["message"])
+								if(r["message"]==0){
+									let d = new frappe.ui.Dialog({
+										title: 'Enter Direct Sales Details',
+										fields: [
+											{
+												label: 'Contact Person Name',
+												fieldname: 'contact_person_name',
+												fieldtype: 'Link',
+												options:"Contact",
+												reqd: 1
+											},
+											{
+												label: 'Contact Person Phone Number',
+												fieldname: 'contact_person_phone_number',
+												fieldtype: 'Data',
+												reqd: 1
+											},
+										],
+										primary_action_label: 'Submit',
+										primary_action(direct_details) {
+											console.log(direct_details);
+											d.hide();
+										}
+									});
+									d.show();
+									me.events.checkout();
+									me.toggle_checkout_btn(false);
+									me.allow_discount_change && me.$add_discount_percentage_elem.removeClass("d-none") && me.$add_discount_amount_elem.removeClass("d-none");
+								}
+								else if(r["message"]==1){
+									let t = new frappe.ui.Dialog({
+										title: 'Enter Transport Sales Details',
+										fields: [
+											{
+												label: 'Vehicle Number',
+												fieldname: 'vehicle_number',
+												fieldtype: 'Data',
+												reqd: 1
+											},
+											{
+												label: 'Vehicle Destination',
+												fieldname: 'vehicle_destination',
+												fieldtype: 'Data',
+												reqd: 1
+											},
+										],
+										primary_action_label: 'Submit',
+										primary_action(Transport_details) {
+											console.log(Transport_details);
+											t.hide();
+										}
+									});
+									t.show();
+									me.events.checkout();
+											me.toggle_checkout_btn(false);
+											me.allow_discount_change && me.$add_discount_percentage_elem.removeClass("d-none") && me.$add_discount_amount_elem.removeClass("d-none");
+										}
+								else{
+									let c = new frappe.ui.Dialog({
+										title: 'Enter Courrier Sales Details',
+										fields: [
+											{
+												label: 'Courrier ID',
+												fieldname: 'courrier_id',
+												fieldtype: 'Data',
+												reqd: 1
+											},
+											{
+												label: 'Courrier Destination',
+												fieldname: 'courrier_destination',
+												fieldtype: 'Data',
+												reqd: 1
+											},
+										],
+										primary_action_label: 'Submit',
+										primary_action(courrier_details) {
+											console.log(courrier_details);
+											c.hide();
+										}
+									});
+									c.show();
+									me.events.checkout();
+									me.toggle_checkout_btn(false);
+									me.allow_discount_change && me.$add_discount_percentage_elem.removeClass("d-none") && me.$add_discount_amount_elem.removeClass("d-none");
+								}
+							}
+						})
+						s.hide();
 					}
-				}	
-			})
-			//me.events.checkout();
-			//me.toggle_checkout_btn(false);
-			//me.allow_discount_change && me.$add_discount_elem.removeClass("d-none");
-			//apps/erpnext/erpnext/selling/page/point_of_sale/point_of_sale.py
+					else if(total_count_sales==0){
+						frappe.msgprint("Select Any One Of The Sales Type")
+					}
+					else{
+						frappe.msgprint("Select Only One Sales Type")
+					}
+				}
+			});
+			s.show();
+			// me.events.checkout();
+			// me.toggle_checkout_btn(false);
+			// me.allow_discount_change && me.$add_discount_elem.removeClass("d-none");
 		});
 
 		this.$totals_section.on('click', '.edit-cart-btn', () => {
@@ -224,10 +331,15 @@ erpnext.PointOfSale.ItemCart = class {
 			this.toggle_checkout_btn(true);
 		});
 
-		this.$component.on('click', '.add-discount-wrapper', () => {
-			const can_edit_discount = this.$add_discount_elem.find('.edit-discount-btn').length;
+		this.$component.on('click', '.add-discount-percentage-wrapper', () => {
+			const can_edit_discount = this.$add_discount_percentage_elem.find('.edit-discount-btn').length;
 
-			if(!this.discount_field || can_edit_discount) this.show_discount_control();
+			if(!this.discount_field || can_edit_discount) this.show_discount_percentage_control();
+		});
+		this.$component.on('click', '.add-discount-amount-wrapper', () => {
+			const can_edit_discount = this.$add_discount_amount_elem.find('.edit-discount-btn').length;
+
+			if(!this.discount_field || can_edit_discount) this.show_discount_amount_control();
 		});
 
 		frappe.ui.form.on("POS Invoice", "paid_amount", frm => {
@@ -280,12 +392,21 @@ erpnext.PointOfSale.ItemCart = class {
 				this.$component.find(".edit-cart-btn").click();
 			}
 		});
-		this.$component.find(".add-discount-wrapper").attr("title", `${ctrl_label}+D`);
+		this.$component.find(".add-discount-percentage-wrapper").attr("title", `${ctrl_label}+D`);
 		frappe.ui.keys.add_shortcut({
 			shortcut: "ctrl+d",
-			action: () => this.$component.find(".add-discount-wrapper").click(),
-			condition: () => this.$add_discount_elem.is(":visible"),
-			description: __("Add Order Discount"),
+			action: () => this.$component.find(".add-discount-percentage-wrapper").click(),
+			condition: () => this.$add_discount_percentage_elem.is(":visible"),
+			description: __("Add Order Discount Percentage"),
+			ignore_inputs: true,
+			page: cur_page.page.page
+		});
+		this.$component.find(".add-discount-amount-wrapper").attr("title", `${ctrl_label}+D`);
+		frappe.ui.keys.add_shortcut({
+			shortcut: "ctrl+d",
+			action: () => this.$component.find(".add-discount-amount-wrapper").click(),
+			condition: () => this.$add_discount_amount_elem.is(":visible"),
+			description: __("Add Order Discount Amount"),
 			ignore_inputs: true,
 			page: cur_page.page.page
 		});
@@ -385,11 +506,12 @@ erpnext.PointOfSale.ItemCart = class {
 		}
 	}
 
-	show_discount_control() {
-		this.$add_discount_elem.css({ 'padding': '0px', 'border': 'none' });
-		this.$add_discount_elem.html(
+	show_discount_percentage_control() {
+		this.$add_discount_percentage_elem.css({ 'padding': '0px', 'border': 'none' });
+		this.$add_discount_percentage_elem.html(
 			`<div class="add-discount-field"></div>`
 		);
+		var percentage_message=0
 		const me = this;
 		const frm = me.events.get_frm();
 		let discount = frm.doc.additional_discount_percentage;
@@ -401,41 +523,125 @@ erpnext.PointOfSale.ItemCart = class {
 				placeholder: ( discount ? discount + '%' :  __('Enter discount percentage.') ),
 				input_class: 'input-xs',
 				onchange: function() {
-					if (flt(this.value) != 0) {
-						frappe.model.set_value(frm.doc.doctype, frm.doc.name, 'additional_discount_percentage', flt(this.value));
-						me.hide_discount_control(this.value);
-					} else {
-						frappe.model.set_value(frm.doc.doctype, frm.doc.name, 'additional_discount_percentage', 0);
-						me.$add_discount_elem.css({
-							'border': '1px dashed var(--gray-500)',
-							'padding': 'var(--padding-sm) var(--padding-md)'
-						});
-						me.$add_discount_elem.html(`${me.get_discount_icon()} ${__('Add Discount')}`);
-						me.discount_field = undefined;
+					if(this.value>100)
+					{
+						if(percentage_message==0)
+						{
+							frappe.msgprint("Please Enter The Percentage Below 100")
+							percentage_message=percentage_message+1
+						}
+					}
+					else
+					{
+						if (flt(this.value) != 0) {
+							frappe.model.set_value(frm.doc.doctype, frm.doc.name, 'additional_discount_percentage', flt(this.value));
+							me.hide_discount_percentage_control(this.value);
+						}
+						else {
+							frappe.model.set_value(frm.doc.doctype, frm.doc.name, 'additional_discount_percentage', 0);
+							me.$add_discount_percentage_elem.css({
+								'border': '1px dashed var(--gray-500)',
+								'padding': 'var(--padding-sm) var(--padding-md)'
+							});
+							me.$add_discount_percentage_elem.html(`${me.get_discount_icon()} ${__('Add Discount')}`);
+							me.discount_field = undefined;
+						}	
 					}
 				},
 			},
-			parent: this.$add_discount_elem.find('.add-discount-field'),
+			parent: this.$add_discount_percentage_elem.find('.add-discount-field'),
 			render_input: true,
 		});
 		this.discount_field.toggle_label(false);
 		this.discount_field.set_focus();
 	}
 
-	hide_discount_control(discount) {
+	hide_discount_percentage_control(discount) {
 		if (!discount) {
-			this.$add_discount_elem.css({ 'padding': '0px', 'border': 'none' });
-			this.$add_discount_elem.html(
+			this.$add_discount_percentage_elem.css({ 'padding': '0px', 'border': 'none' });
+			this.$add_discount_percentage_elem.html(
 				`<div class="add-discount-field"></div>`
 			);
 		} else {
-			this.$add_discount_elem.css({
+			this.$add_discount_percentage_elem.css({
 				'border': '1px dashed var(--dark-green-500)',
 				'padding': 'var(--padding-sm) var(--padding-md)'
 			});
-			this.$add_discount_elem.html(
+			this.$add_discount_percentage_elem.html(
 				`<div class="edit-discount-btn">
-					${this.get_discount_icon()} ${__("Additional")}&nbsp;${String(discount).bold()}% ${__("discount applied")}
+					${this.get_discount_icon()} ${__("Additional")}&nbsp;${String(discount).bold()}% ${__("discount percentage applied")}
+				</div>`
+			);
+		}
+	}
+
+	show_discount_amount_control() {
+		this.$add_discount_amount_elem.css({ 'padding': '0px', 'border': 'none' });
+		this.$add_discount_amount_elem.html(
+			`<div class="add-discount-field"></div>`
+		);
+		
+		const me = this;
+		const frm = me.events.get_frm();
+		const grand_total = cint(frappe.sys_defaults.disable_rounded_total) ? frm.doc.grand_total : frm.doc.rounded_total;
+		console.log(grand_total)
+		var amount_message=0
+		let discount = frm.doc.discount_amount;
+
+		this.discount_field = frappe.ui.form.make_control({
+			df: {
+				label: __('Discount'),
+				fieldtype: 'Data',
+				placeholder: ( discount ? discount + '₹' :  __('Enter discount amount.') ),
+				input_class: 'input-xs',
+				onchange: function() {
+					if(grand_total<this.value)
+					{
+						if(amount_message==0)
+						{
+							frappe.msgprint("Please Enter The Amount Less Than Grand Total")
+							amount_message=amount_message+1
+						}
+					}
+					else
+					{
+						if (flt(this.value) != 0) {
+							frappe.model.set_value(frm.doc.doctype, frm.doc.name, 'discount_amount', flt(this.value));
+							me.hide_discount_amount_control(this.value);
+						} else {
+							frappe.model.set_value(frm.doc.doctype, frm.doc.name, 'discount_amount', 0);
+							me.$add_discount_amount_elem.css({
+								'border': '1px dashed var(--gray-500)',
+								'padding': 'var(--padding-sm) var(--padding-md)'
+							});
+							me.$add_discount_amount_elem.html(`${me.get_discount_icon()} ${__('Add Discount')}`);
+							me.discount_field = undefined;
+						}
+						
+					}	
+				},
+			},
+			parent: this.$add_discount_amount_elem.find('.add-discount-field'),
+			render_input: true,
+		});
+		this.discount_field.toggle_label(false);
+		this.discount_field.set_focus();
+	}
+
+	hide_discount_amount_control(discount) {
+		if (!discount) {
+			this.$add_discount_amount_elem.css({ 'padding': '0px', 'border': 'none' });
+			this.$add_discount_amount_elem.html(
+				`<div class="add-discount-field"></div>`
+			);
+		} else {
+			this.$add_discount_amount_elem.css({
+				'border': '1px dashed var(--dark-green-500)',
+				'padding': 'var(--padding-sm) var(--padding-md)'
+			});
+			this.$add_discount_amount_elem.html(
+				`<div class="edit-discount-btn">
+					${this.get_discount_icon()} ${__("Additional")}&nbsp;₹${String(discount).bold()} ${__("discount amount applied")}
 				</div>`
 			);
 		}
@@ -489,15 +695,26 @@ erpnext.PointOfSale.ItemCart = class {
 			return `<div class="customer-image customer-abbr">${frappe.get_abbr(customer)}</div>`;
 		}
 	}
-
 	update_totals_section(frm) {
 		if (!frm) frm = this.events.get_frm();
-
-		this.render_net_total(frm.doc.net_total);
 		const grand_total = cint(frappe.sys_defaults.disable_rounded_total) ? frm.doc.grand_total : frm.doc.rounded_total;
+		this.render_net_total(frm.doc.net_total);
 		this.render_grand_total(grand_total);
-
 		this.render_taxes(frm.doc.taxes);
+		// if(grand_total<0)
+		// {
+		// 	if(amount_message==0)
+		// 	{
+		// 		frappe.msgprint("Please Enter The Amount Less Than Grand Total")
+		// 		amount_message=amount_message+1
+		// 	}
+		// }
+		// else
+		// {
+		// 	this.render_net_total(frm.doc.net_total);
+		// 	this.render_grand_total(grand_total);
+		// 	this.render_taxes(frm.doc.taxes);
+		// }	
 	}
 
 	render_net_total(value) {
@@ -512,6 +729,8 @@ erpnext.PointOfSale.ItemCart = class {
 	}
 
 	render_grand_total(value) {
+		// var old_grand=value
+		// console.log(old_grand)
 		const currency = this.events.get_frm().doc.currency;
 		this.$totals_section.find('.grand-total-container').html(
 			`<div>${__('Grand Total')}</div><div>${format_currency(value, currency)}</div>`
@@ -560,8 +779,8 @@ erpnext.PointOfSale.ItemCart = class {
 		}
 
 		const no_of_cart_items = this.$cart_items_wrapper.find('.cart-item-wrapper').length;
-		this.highlight_checkout_btn(no_of_cart_items > 0);
-
+		this.highlight_percentage_checkout_btn(no_of_cart_items > 0);
+		this.highlight_amount_checkout_btn(no_of_cart_items > 0);
 		this.update_empty_cart_section(no_of_cart_items);
 	}
 
@@ -578,7 +797,7 @@ erpnext.PointOfSale.ItemCart = class {
 		}
 
 		$item_to_update.html(
-			`${get_item_image_html()}
+			`
 			<div class="item-name-desc">
 				<div class="item-name">
 					${item_data.item_name}
@@ -643,25 +862,25 @@ erpnext.PointOfSale.ItemCart = class {
 			return ``;
 		}
 
-		function get_item_image_html() {
-			const { image, item_name } = item_data;
-			if (!me.hide_images && image) {
-				return `
-					<div class="item-image">
-						<img
-							onerror="cur_pos.cart.handle_broken_image(this)"
-							src="${image}" alt="${frappe.get_abbr(item_name)}"">
-					</div>`;
-			} else {
-				return `<div class="item-image item-abbr">${frappe.get_abbr(item_name)}</div>`;
-			}
-		}
+		// function get_item_image_html() {
+		// 	const { image, item_name } = item_data;
+		// 	if (!me.hide_images && image) {
+		// 		return `
+		// 			<div class="item-image">
+		// 				<img
+		// 					onerror="cur_pos.cart.handle_broken_image(this)"
+		// 					src="${image}" alt="${frappe.get_abbr(item_name)}"">
+		// 			</div>`;
+		// 	} else {
+		// 		return `<div class="item-image item-abbr">${frappe.get_abbr(item_name)}</div>`;
+		// 	}
+		// }
 	}
 
-	handle_broken_image($img) {
-		const item_abbr = $($img).attr('alt');
-		$($img).parent().replaceWith(`<div class="item-image item-abbr">${item_abbr}</div>`);
-	}
+	// handle_broken_image($img) {
+	// 	const item_abbr = $($img).attr('alt');
+	// 	$($img).parent().replaceWith(`<div class="item-image item-abbr">${item_abbr}</div>`);
+	// }
 
 	update_selector_value_in_cart_item(selector, value, item) {
 		const $item_to_update = this.get_cart_item(item);
@@ -678,14 +897,28 @@ erpnext.PointOfSale.ItemCart = class {
 		}
 	}
 
-	highlight_checkout_btn(toggle) {
+	highlight_percentage_checkout_btn(toggle) {
 		if (toggle) {
-			this.$add_discount_elem.css('display', 'flex');
+			this.$add_discount_percentage_elem.css('display', 'flex');
 			this.$cart_container.find('.checkout-btn').css({
 				'background-color': 'var(--blue-500)'
 			});
 		} else {
-			this.$add_discount_elem.css('display', 'none');
+			this.$add_discount_percentage_elem.css('display', 'none');
+			this.$cart_container.find('.checkout-btn').css({
+				'background-color': 'var(--blue-200)'
+			});
+		}
+	}
+
+	highlight_amount_checkout_btn(toggle) {
+		if (toggle) {
+			this.$add_discount_amount_elem.css('display', 'flex');
+			this.$cart_container.find('.checkout-btn').css({
+				'background-color': 'var(--blue-500)'
+			});
+		} else {
+			this.$add_discount_amount_elem.css('display', 'none');
 			this.$cart_container.find('.checkout-btn').css({
 				'background-color': 'var(--blue-200)'
 			});
@@ -1013,7 +1246,8 @@ erpnext.PointOfSale.ItemCart = class {
 			});
 		} else {
 			this.make_no_items_placeholder();
-			this.highlight_checkout_btn(false);
+			this.highlight_percentage_checkout_btn(false);
+			this.highlight_amount_checkout_btn(false);
 		}
 
 		this.update_totals_section(frm);

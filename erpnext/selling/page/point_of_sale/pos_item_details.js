@@ -98,17 +98,6 @@ erpnext.PointOfSale.ItemDetails = class {
 		const batched = item_row.has_batch_no;
 		const no_serial_selected = !item_row.serial_no;
 		const no_batch_selected = !item_row.batch_no;
-		var a=item_row.batch_no
-		console.log(item_row.batch_no)
-		frappe.call({
-			method: "erpnext.selling.page.point_of_sale.point_of_sale.batch_validation1",
-			args:{pos_batch:a}
-			// callback: function(r) {
-				
-			// }
-		})
-
-
 		if ((serialized && no_serial_selected) || (batched && no_batch_selected) ||
 			(serialized && batched && (no_batch_selected || no_serial_selected))) {
 
@@ -135,24 +124,24 @@ erpnext.PointOfSale.ItemDetails = class {
 		this.$item_name.html(item_name);
 		this.$item_description.html(get_description_html());
 		this.$item_price.html(format_currency(price_list_rate, this.currency));
-		if (!this.hide_images && image) {
-			this.$item_image.html(
-				`<img
-					onerror="cur_pos.item_details.handle_broken_image(this)"
-					class="h-full" src="${image}"
-					alt="${frappe.get_abbr(item_name)}"
-					style="object-fit: cover;">`
-			);
-		} else {
-			this.$item_image.html(`<div class="item-abbr">${frappe.get_abbr(item_name)}</div>`);
-		}
+		// if (!this.hide_images && image) {
+		// 	this.$item_image.html(
+		// 		`<img
+		// 			onerror="cur_pos.item_details.handle_broken_image(this)"
+		// 			class="h-full" src="${image}"
+		// 			alt="${frappe.get_abbr(item_name)}"
+		// 			style="object-fit: cover;">`
+		// 	);
+		// } else {
+		// 	this.$item_image.html(`<div class="item-abbr">${frappe.get_abbr(item_name)}</div>`);
+		// }
 
 	}
 
-	handle_broken_image($img) {
-		const item_abbr = $($img).attr('alt');
-		$($img).replaceWith(`<div class="item-abbr">${item_abbr}</div>`);
-	}
+	// handle_broken_image($img) {
+	// 	const item_abbr = $($img).attr('alt');
+	// 	$($img).replaceWith(`<div class="item-abbr">${item_abbr}</div>`);
+	// }
 
 	render_discount_dom(item) {
 		if (item.discount_percentage) {

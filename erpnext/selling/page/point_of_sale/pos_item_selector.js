@@ -25,8 +25,10 @@ erpnext.PointOfSale.ItemSelector = class {
 			`<section class="items-selector">
 				<div class="filter-section">
 					<div class="label">${__('All Items')}</div>
-					<div class="search-field"></div>
 					<div class="item-group-field"></div>
+					<div class="vehicle-group-field"></div>
+					<div class="label">${__('')}</div>
+					<div class="search-field"></div>
 				</div>
 				<div class="items-container"></div>
 			</section>`
@@ -41,6 +43,9 @@ erpnext.PointOfSale.ItemSelector = class {
 			const res = await frappe.db.get_value("Item Group", {lft: 1, is_group: 1}, "name");
 			this.parent_item_group = res.message.name;
 		}
+		if (!this.vehicle_group) {
+			this.parent_vehicle_group =0;
+		}
 		if (!this.price_list) {
 			const res = await frappe.db.get_value("POS Profile", this.pos_profile, "selling_price_list");
 			this.price_list = res.message.selling_price_list;
@@ -53,18 +58,25 @@ erpnext.PointOfSale.ItemSelector = class {
 
 	get_items({start = 0, page_length = 40, search_term=''}) {
 		const doc = this.events.get_frm().doc;
+		// var gro=this.vehicle_group_field
 		const price_list = (doc && doc.selling_price_list) || this.price_list;
-		let { item_group, pos_profile } = this;
-
+		let { item_group,vehicle_group,pos_profile } = this;
+		// console.log(item_group)
 		!item_group && (item_group = this.parent_item_group);
-
+		!vehicle_group && (vehicle_group = this.parent_vehicle_group);
+		// if(!vehicle_group)
+		// {
+		// 	vehicle_group=0
+		// }
+		// console.log(vehicle_group)
+		// console.log(item_group)
 		return frappe.call({
 			method: "erpnext.selling.page.point_of_sale.point_of_sale.get_items",
 			freeze: true,
-			args: { start, page_length, price_list, item_group, search_term, pos_profile },
+			args: { start, page_length, price_list, item_group,vehicle_group, search_term, pos_profile},
+			
 		});
 	}
-
 
 	render_item_list(items) {
 		this.$items_container.html('');
@@ -93,19 +105,12 @@ erpnext.PointOfSale.ItemSelector = class {
 			if (!me.hide_images && item_image) {
 				return `<div class="item-qty-pill">
 							<span class="indicator-pill whitespace-nowrap ${indicator_color}">${qty_to_display}</span>
-						</div>
-						<div class="flex items-center justify-center h-32 border-b-grey text-6xl text-grey-100">
-							<img
-								onerror="cur_pos.item_selector.handle_broken_image(this)"
-								class="h-full" src="${item_image}"
-								alt="${frappe.get_abbr(item.item_name)}"
-								style="object-fit: cover;">
-						</div>`;
+						</div>`
+						
 			} else {
 				return `<div class="item-qty-pill">
 							<span class="indicator-pill whitespace-nowrap ${indicator_color}">${qty_to_display}</span>
-						</div>
-						<div class="item-display abbr">${frappe.get_abbr(item.item_name)}</div>`;
+						</div>`;
 			}
 		}
 
@@ -128,16 +133,17 @@ erpnext.PointOfSale.ItemSelector = class {
 		);
 	}
 
-	handle_broken_image($img) {
-		const item_abbr = $($img).attr('alt');
-		$($img).parent().replaceWith(`<div class="item-display abbr">${item_abbr}</div>`);
-	}
+	// handle_broken_image($img) {
+	// 	const item_abbr = $($img).attr('alt');
+	// 	$($img).parent().replaceWith(`<div class="item-display abbr">${item_abbr}</div>`);
+	// }
 
 	make_search_bar() {
 		const me = this;
 		const doc = me.events.get_frm().doc;
 		this.$component.find('.search-field').html('');
 		this.$component.find('.item-group-field').html('');
+		this.$component.find('.Vehicle-group-field').html('');
 
 		this.search_field = frappe.ui.form.make_control({
 			df: {
@@ -153,7 +159,7 @@ erpnext.PointOfSale.ItemSelector = class {
 				label: __('Item Group'),
 				fieldtype: 'Link',
 				options: 'Item Group',
-				placeholder: __('Select item group'),
+				placeholder: __('Select Item Group'),
 				onchange: function() {
 					me.item_group = this.value;
 					!me.item_group && (me.item_group = me.parent_item_group);
@@ -169,10 +175,29 @@ erpnext.PointOfSale.ItemSelector = class {
 				},
 			},
 			parent: this.$component.find('.item-group-field'),
+			render_input: true,	
+		});
+		this.vehicle_group_field = frappe.ui.form.make_control({
+			df: {
+				label: __('Vehicle Group'),
+				fieldtype: 'Link',
+				options: 'TS Vehicle Group',
+				placeholder: __('Select Vehicle Group'),
+				onchange: function() {
+					me.vehicle_group = this.value;
+					!me.vehicle_group && (me.vehicle_group = me.parent_vehicle_group);
+					me.filter_items();
+					// console.log(vehicle_group)
+					// return(vehicle_group)
+				},
+			},
+			parent: this.$component.find('.vehicle-group-field'),
 			render_input: true,
 		});
 		this.search_field.toggle_label(false);
-		this.item_group_field.toggle_label(false);
+		this.vehicle_group_field.toggle_label(false);
+		this.item_group_field.toggle_label(false);	
+		
 	}
 
 	set_search_value(value) {
@@ -269,7 +294,15 @@ erpnext.PointOfSale.ItemSelector = class {
 			ignore_inputs: true,
 			page: cur_page.page.page
 		});
-
+		this.vehicle_group_field.parent.attr("title", `${ctrl_label}+G`);
+		frappe.ui.keys.add_shortcut({
+			shortcut: "ctrl+v",
+			action: () => this.vehicle_group_field.set_focus(),
+			condition: () => this.$component.is(':visible'),
+			description: __("Focus on Vehicle Group filter"),
+			ignore_inputs: true,
+			page: cur_page.page.page
+		});
 		// for selecting the last filtered item on search
 		frappe.ui.keys.on("enter", () => {
 			const selector_is_visible = this.$component.is(':visible');

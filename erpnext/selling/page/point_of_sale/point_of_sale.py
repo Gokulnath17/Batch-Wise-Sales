@@ -47,7 +47,10 @@ def search_by_term(search_term, warehouse, price_list):
 		return {'items': [item_info]}
 
 @frappe.whitelist()
-def get_items(start, page_length, price_list, item_group, pos_profile, search_term=""):
+def get_items(start, page_length, price_list,item_group,vehicle_group, pos_profile, search_term=""):
+	# if(vehicle_group=="0"):
+	# 	vehicle_group=None
+	# print(vehicle_group)
 	warehouse, hide_unavailable_items = frappe.db.get_value(
 		'POS Profile', pos_profile, ['warehouse', 'hide_unavailable_items'])
 
@@ -58,50 +61,83 @@ def get_items(start, page_length, price_list, item_group, pos_profile, search_te
 		if result:
 			return result
 
-	if not frappe.db.exists('Item Group', item_group):
-		item_group = get_root_of('Item Group')
+	# if not frappe.db.exists('Item Group', item_group):
+	# 	item_group = get_root_of('Item Group')
 
 	condition = get_conditions(search_term)
 	condition += get_item_group_condition(pos_profile)
-
-	lft, rgt = frappe.db.get_value('Item Group', item_group, ['lft', 'rgt'])
-
+	
 	bin_join_selection, bin_join_condition = "", ""
 	if hide_unavailable_items:
 		bin_join_selection = ", `tabBin` bin"
 		bin_join_condition = "AND bin.warehouse = %(warehouse)s AND bin.item_code = item.name AND bin.actual_qty > 0"
-
-	items_data = frappe.db.sql("""
-		SELECT
-			item.name AS item_code,
-			item.item_name,
-			item.description,
-			item.stock_uom,
-			item.image AS item_image,
-			item.is_stock_item
-		FROM
-			`tabItem` item {bin_join_selection}
-		WHERE
-			item.disabled = 0
-			AND item.has_variants = 0
-			AND item.is_sales_item = 1
-			AND item.is_fixed_asset = 0
-			AND item.item_group in (SELECT name FROM `tabItem Group` WHERE lft >= {lft} AND rgt <= {rgt})
-			AND {condition}
-			{bin_join_condition}
-		ORDER BY
-			item.name asc
-		LIMIT
-			{start}, {page_length}"""
-		.format(
-			start=start,
-			page_length=page_length,
-			lft=lft,
-			rgt=rgt,
-			condition=condition,
-			bin_join_selection=bin_join_selection,
-			bin_join_condition=bin_join_condition
-		), {'warehouse': warehouse}, as_dict=1)
+	if(vehicle_group=="0"):
+		item_group_lft, item_group_rgt = frappe.db.get_value('Item Group', item_group, ['lft', 'rgt'])
+		items_data = frappe.db.sql("""
+			SELECT
+				item.name AS item_code,
+				item.item_name,
+				item.description,
+				item.stock_uom,
+				item.image AS item_image,
+				item.is_stock_item
+			FROM
+				`tabItem` item {bin_join_selection}
+			WHERE
+				item.disabled = 0
+				AND item.has_variants = 0
+				AND item.is_sales_item = 1
+				AND item.is_fixed_asset = 0
+				AND item.item_group in (SELECT name FROM `tabItem Group` WHERE lft >= {lft} AND rgt <= {rgt})
+				AND {condition}
+				{bin_join_condition}
+			ORDER BY
+				item.name asc
+			LIMIT
+				{start}, {page_length}"""
+			.format(
+				start=start,
+				page_length=page_length,
+				lft=item_group_lft,
+				rgt=item_group_rgt,
+				condition=condition,
+				bin_join_selection=bin_join_selection,
+				bin_join_condition=bin_join_condition
+			), {'warehouse': warehouse}, as_dict=1)
+	else:
+		vehicle_group_lft, vehicle_group_rgt = frappe.db.get_value('TS Vehicle Group', vehicle_group, ['lft', 'rgt'])
+		items_data = frappe.db.sql("""
+			SELECT
+				item.name AS item_code,
+				item.item_name,
+				item.description,
+				item.stock_uom,
+				item.image AS item_image,
+				item.is_stock_item
+			FROM
+				`tabItem` item {bin_join_selection}
+			WHERE
+				item.disabled = 0
+				AND item.has_variants = 0
+				AND item.is_sales_item = 1
+				AND item.is_fixed_asset = 0
+				AND item.vehicle in (SELECT name FROM `tabTS Vehicle Group` WHERE lft >= {lft} AND rgt <= {rgt})
+				AND {condition}
+				{bin_join_condition}
+			ORDER BY
+				item.name asc
+			LIMIT
+				{start}, {page_length}"""
+			.format(
+				start=start,
+				page_length=page_length,
+				lft=vehicle_group_lft,
+				rgt=vehicle_group_rgt,
+				condition=condition,
+				bin_join_selection=bin_join_selection,
+				bin_join_condition=bin_join_condition
+			), {'warehouse': warehouse}, as_dict=1)
+		
 
 	if items_data:
 		items_data = filter_service_items(items_data)
@@ -127,8 +163,8 @@ def get_items(start, page_length, price_list, item_group, pos_profile, search_te
 				'actual_qty': item_stock_qty,
 			})
 			result.append(row)
-
 	return {'items': result}
+
 
 @frappe.whitelist()
 def search_for_serial_or_batch_or_barcode_number(search_value):
@@ -290,111 +326,13 @@ def set_customer_info(fieldname, customer, value=""):
 		frappe.db.set_value('Customer', customer, 'mobile_no', value)
 	contact_doc.save()
 
-
-##batch validation1
-arr=[]
-pos_batch1=None
 @frappe.whitelist(allow_guest=True)
-def batch_validation1(pos_batch=None):
-	arr.append(pos_batch)
-	global pos_batch1
-	pos_batch1=arr
-	# print(pos_batch1)
-	
-##batch validation2
-batch_validation1()
-pos_tot_batch=0
-@frappe.whitelist(allow_guest=True)
-def batch_validation2():
-	global pos_tot_batch,pos_batch1
-	# print(pos_tot_batch,"global")
-	print(pos_batch1,"normal")
-	if(len(pos_batch1) == pos_tot_batch or pos_tot_batch==0):
-		# print("true")
-		pass
-	else:
-		all_batch=frappe.db.get_all("Batch",fields=["name","item","disabled"])
-		print(all_batch)
-		lbn=[]
-		lin=[]
-		for i in range(0,len(all_batch),1):
-			if(pos_batch1[len(pos_batch1)-1] == all_batch[i]["name"] and all_batch[i]["disabled"]==0):
-				lin.append(all_batch[i]["item"])
-				print(lin,"itemname")
-				for j in range(0,len(all_batch),1):
-					if(lin[0]==all_batch[j]["item"]):
-						lbn.append(all_batch[j]["name"])
-				print(lbn,"batchname")
-		print(pos_batch1)
-		for x in range(0,len(pos_batch1),1):
-			if(lbn[0]==pos_batch1[x]):
-				print(pos_batch1.pop(x),"hiii")
-				break
-		
-		# print("false")
-	pos_tot_batch=len(pos_batch1)
-	# print(pos_tot_batch,"jjjjjj")
-	pos_c=None
-	for pn in range(1,len(pos_batch1),1):
-		if(pos_batch1[pn] != None):
-			cb=frappe.get_doc("Stock Settings").__dict__["batch_wise_sales"]
-			listn=[]
-			listc=[]
-			listi=[]
-			all_batch=frappe.db.get_all("Batch",fields=["name","creation","item","batch_qty","disabled"])
-			for i in range(0,len(all_batch),1):
-				listi.append(all_batch[i]["item"])
-				qty=all_batch[i]["batch_qty"]
-				if(qty == 0):
-					all_batch[i]["disabled"]=1
-				if(pos_batch1[pn] == all_batch[i]["name"] and all_batch[i]["disabled"]==0 ):
-					pos_i=all_batch[i]["item"]
-					print(pos_c,"pos_cmmmmmmmmmmmmmmmm")
-					pos_c=all_batch[i]["creation"]
-					print(pos_c,"pos_cmmmmmmmmmmmmmmmmyyyyyyyyyyyyyyyyy")
-				else:
-					for x in range(0,len(listi),1):
-						try:
-							if(pos_i == listi[x]):
-								n=all_batch[x]["name"]
-								c=all_batch[x]["creation"]
-								listn.append(n)
-								listc.append(c)
-						except:
-							continue
-			i=0
-
-			print(listc,"cccccccccccccccccccccccccccccccc")
-			x=None
-			print(len(listc),"vvvvvvvvvvvvvvvvvvvvv")
-			print(pos_c,"pos_ccccccccccccc")
-			for j in range(0,len(listc),1):
-				print(j,"jjjjjjjjjjjjjjjj")
-				print(pos_c,"pos_csssssssssssss")
-				if(pos_c > listc[j]):
-					print(pos_c,"pos_c")
-					pos_c=listc[j]
-					x=j
-			if(cb==1):
-				try:
-					print(listn[x],"kkkkkkkkkkkkkkkkkk")
-					fr=pos_i + " -> Old batch name : " + listn[x]
-					print(fr,"fffffffffffffffffffffffffffffffffffffffffff")
-					print(pos_batch1,"normalssssssssssssssssssssss")
-					pos_batch1=None
-					print(pos_batch1,"normalssssssssssssssssssssss")
-					return(fr)
-				except:
-					print(pos_batch1,"normalssssssssssssssssssssss")
-					print("ssssssssssssssssssssssssssssssssssss")
-					pos_batch1=None
-					return 1
-			
-			else:
-				if(x==None):
-					return 1
-				else:
-					return 0
-		else:
-			return 1
-	print(pos_batch1,"normalssssssssssssssssssssss")
+def sales(Direct_Selling,Transport_Selling,Courrier_Selling):
+	values_sales=[]
+	values_sales.append(Direct_Selling)
+	values_sales.append(Transport_Selling)
+	values_sales.append(Courrier_Selling)
+	# print(values_sales)
+	for i in range(0,len(values_sales),1):
+		if(values_sales[i]=="1"):
+			return i
