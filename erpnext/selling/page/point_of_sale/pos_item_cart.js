@@ -1,3 +1,4 @@
+// var customer_contact
 erpnext.PointOfSale.ItemCart = class {
 	constructor({ wrapper, events, settings }) {
 		this.wrapper = wrapper;
@@ -106,10 +107,6 @@ erpnext.PointOfSale.ItemCart = class {
 				${this.get_discount_icon()} ${__('Add Amount Percentage')}
 			</div>
 			
-			<div class="net-total-container">
-				<div class="net-total-label">${__("Net Total")}</div>
-				<div class="net-total-value">0.00</div>
-			</div>
 			<div class="taxes-container"></div>
 			<div class="grand-total-container">
 				<div>${__('Grand Total')}</div>
@@ -148,7 +145,7 @@ erpnext.PointOfSale.ItemCart = class {
 
 		this.$numpad_section.prepend(
 			`<div class="numpad-totals">
-				<span class="numpad-net-total"></span>
+				
 				<span class="numpad-grand-total"></span>
 			</div>`
 		)
@@ -222,8 +219,10 @@ erpnext.PointOfSale.ItemCart = class {
 							method: "erpnext.selling.page.point_of_sale.point_of_sale.sales",
 							args:{Direct_Selling:values["Direct_Selling"],Transport_Selling:values["Transport_Selling"],Courrier_Selling:values["Courrier_Selling"]},
 							callback: function(r){
-								console.log(r["message"])
+								// console.log(r["message"])
 								if(r["message"]==0){
+									// var aaaa=frappe.db.get_value('Customer',filters={"customer_name":"navin"},fields=["customer_primary_contact"])
+									// console.log(aaaa)
 									let d = new frappe.ui.Dialog({
 										title: 'Enter Direct Sales Details',
 										fields: [
@@ -232,6 +231,7 @@ erpnext.PointOfSale.ItemCart = class {
 												fieldname: 'contact_person_name',
 												fieldtype: 'Link',
 												options:"Contact",
+												// filters:{"first_name":aaaa},
 												reqd: 1
 											},
 											{
@@ -245,26 +245,27 @@ erpnext.PointOfSale.ItemCart = class {
 										primary_action(direct_details) {
 											console.log(direct_details);
 											d.hide();
+											me.events.checkout();
+											me.toggle_checkout_btn(false);
+											me.allow_discount_change && me.$add_discount_percentage_elem.removeClass("d-none") && me.$add_discount_amount_elem.removeClass("d-none");
 										}
 									});
 									d.show();
-									me.events.checkout();
-									me.toggle_checkout_btn(false);
-									me.allow_discount_change && me.$add_discount_percentage_elem.removeClass("d-none") && me.$add_discount_amount_elem.removeClass("d-none");
 								}
 								else if(r["message"]==1){
 									let t = new frappe.ui.Dialog({
 										title: 'Enter Transport Sales Details',
 										fields: [
 											{
-												label: 'Vehicle Number',
-												fieldname: 'vehicle_number',
-												fieldtype: 'Data',
+												label: 'Bus Number',
+												fieldname: 'bus_number',
+												fieldtype: 'Link',
+												options: 'TS Bus Details',
 												reqd: 1
 											},
 											{
-												label: 'Vehicle Destination',
-												fieldname: 'vehicle_destination',
+												label: 'Bus Destination',
+												fieldname: 'bus_destination',
 												fieldtype: 'Data',
 												reqd: 1
 											},
@@ -273,13 +274,13 @@ erpnext.PointOfSale.ItemCart = class {
 										primary_action(Transport_details) {
 											console.log(Transport_details);
 											t.hide();
-										}
-									});
-									t.show();
-									me.events.checkout();
+											me.events.checkout();
 											me.toggle_checkout_btn(false);
 											me.allow_discount_change && me.$add_discount_percentage_elem.removeClass("d-none") && me.$add_discount_amount_elem.removeClass("d-none");
 										}
+									});
+									t.show();
+								}
 								else{
 									let c = new frappe.ui.Dialog({
 										title: 'Enter Courrier Sales Details',
@@ -301,12 +302,12 @@ erpnext.PointOfSale.ItemCart = class {
 										primary_action(courrier_details) {
 											console.log(courrier_details);
 											c.hide();
+											me.events.checkout();
+											me.toggle_checkout_btn(false);
+											me.allow_discount_change && me.$add_discount_percentage_elem.removeClass("d-none") && me.$add_discount_amount_elem.removeClass("d-none");
 										}
 									});
 									c.show();
-									me.events.checkout();
-									me.toggle_checkout_btn(false);
-									me.allow_discount_change && me.$add_discount_percentage_elem.removeClass("d-none") && me.$add_discount_amount_elem.removeClass("d-none");
 								}
 							}
 						})
@@ -453,6 +454,7 @@ erpnext.PointOfSale.ItemCart = class {
 				get_query: () => query,
 				onchange: function() {
 					if (this.value) {
+						// console.log(this.value)
 						const frm = me.events.get_frm();
 						frappe.dom.freeze();
 						frappe.model.set_value(frm.doc.doctype, frm.doc.name, 'customer', this.value);
@@ -475,9 +477,11 @@ erpnext.PointOfSale.ItemCart = class {
 	}
 
 	fetch_customer_details(customer) {
+		// console.log(customer)
+		// customer_contact=customer
 		if (customer) {
 			return new Promise((resolve) => {
-				frappe.db.get_value('Customer', customer, ["email_id", "mobile_no", "image", "loyalty_program"]).then(({ message }) => {
+				frappe.db.get_value('Customer', customer, ["email_id","contact_name", "mobile_no", "image", "loyalty_program"]).then(({ message }) => {
 					const { loyalty_program } = message;
 					// if loyalty program then fetch loyalty points too
 					if (loyalty_program) {
@@ -543,7 +547,7 @@ erpnext.PointOfSale.ItemCart = class {
 								'border': '1px dashed var(--gray-500)',
 								'padding': 'var(--padding-sm) var(--padding-md)'
 							});
-							me.$add_discount_percentage_elem.html(`${me.get_discount_icon()} ${__('Add Discount')}`);
+							me.$add_discount_percentage_elem.html(`${me.get_discount_icon()} ${__('Add Discount Percentage')}`);
 							me.discount_field = undefined;
 						}	
 					}
@@ -584,7 +588,7 @@ erpnext.PointOfSale.ItemCart = class {
 		const me = this;
 		const frm = me.events.get_frm();
 		const grand_total = cint(frappe.sys_defaults.disable_rounded_total) ? frm.doc.grand_total : frm.doc.rounded_total;
-		console.log(grand_total)
+		// console.log(grand_total)
 		var amount_message=0
 		let discount = frm.doc.discount_amount;
 
@@ -614,7 +618,7 @@ erpnext.PointOfSale.ItemCart = class {
 								'border': '1px dashed var(--gray-500)',
 								'padding': 'var(--padding-sm) var(--padding-md)'
 							});
-							me.$add_discount_amount_elem.html(`${me.get_discount_icon()} ${__('Add Discount')}`);
+							me.$add_discount_amount_elem.html(`${me.get_discount_icon()} ${__('Add Discount Amount')}`);
 							me.discount_field = undefined;
 						}
 						
@@ -698,7 +702,7 @@ erpnext.PointOfSale.ItemCart = class {
 	update_totals_section(frm) {
 		if (!frm) frm = this.events.get_frm();
 		const grand_total = cint(frappe.sys_defaults.disable_rounded_total) ? frm.doc.grand_total : frm.doc.rounded_total;
-		this.render_net_total(frm.doc.net_total);
+		// this.render_net_total(frm.doc.net_total);
 		this.render_grand_total(grand_total);
 		this.render_taxes(frm.doc.taxes);
 		// if(grand_total<0)
@@ -717,16 +721,16 @@ erpnext.PointOfSale.ItemCart = class {
 		// }	
 	}
 
-	render_net_total(value) {
-		const currency = this.events.get_frm().doc.currency;
-		this.$totals_section.find('.net-total-container').html(
-			`<div>${__('Net Total')}</div><div>${format_currency(value, currency)}</div>`
-		)
+	// render_net_total(value) {
+	// 	const currency = this.events.get_frm().doc.currency;
+	// 	this.$totals_section.find('.net-total-container').html(
+	// 		`<div>${__('Net Total')}</div><div>${format_currency(value, currency)}</div>`
+	// 	)
 
-		this.$numpad_section.find('.numpad-net-total').html(
-			`<div>${__('Net Total')}: <span>${format_currency(value, currency)}</span></div>`
-		);
-	}
+	// 	this.$numpad_section.find('.numpad-net-total').html(
+	// 		`<div>${__('Net Total')}: <span>${format_currency(value, currency)}</span></div>`
+	// 	);
+	// }
 
 	render_grand_total(value) {
 		// var old_grand=value

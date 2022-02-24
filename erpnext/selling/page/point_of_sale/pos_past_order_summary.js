@@ -119,12 +119,12 @@ erpnext.PointOfSale.PastOrderSummary = class {
 		}
 	}
 
-	get_net_total_html(doc) {
-		return `<div class="summary-row-wrapper">
-					<div>${__('Net Total')}</div>
-					<div>${format_currency(doc.net_total, doc.currency)}</div>
-				</div>`;
-	}
+	// get_net_total_html(doc) {
+	// 	return `<div class="summary-row-wrapper">
+	// 				<div>${__('Net Total')}</div>
+	// 				<div>${format_currency(doc.net_total, doc.currency)}</div>
+	// 			</div>`;
+	// }
 
 	get_taxes_html(doc) {
 		if (!doc.taxes.length) return '';
@@ -390,11 +390,11 @@ erpnext.PointOfSale.PastOrderSummary = class {
 	attach_totals_info(doc) {
 		this.$totals_container.html('');
 
-		const net_total_dom = this.get_net_total_html(doc);
+		// const net_total_dom = this.get_net_total_html(doc);
 		const taxes_dom = this.get_taxes_html(doc);
 		const discount_dom = this.get_discount_html(doc);
 		const grand_total_dom = this.get_grand_total_html(doc);
-		this.$totals_container.append(net_total_dom);
+		// this.$totals_container.append(net_total_dom);
 		this.$totals_container.append(taxes_dom);
 		this.$totals_container.append(discount_dom);
 		this.$totals_container.append(grand_total_dom);
